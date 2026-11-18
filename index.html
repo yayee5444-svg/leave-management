@@ -242,9 +242,9 @@
 
   <!-- Upload zone -->
   <div class="upload-zone" id="upload-zone">
-    <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+    <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,image/*,application/pdf" />
     <div class="up-icon">📁</div>
-    <p><strong>คลิกหรือลากไฟล์มาวาง</strong><br/>PDF, รูปภาพ, Word</p>
+    <p><strong>คลิกหรือลากไฟล์มาวาง</strong><br/>PDF และรูปภาพเท่านั้น</p>
   </div>
 
   <!-- File chips -->
@@ -326,9 +326,18 @@
 
   // === FILES ===
   function addFiles(list) {
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic", "image/heif"];
+    let rejected = [];
     Array.from(list).forEach(f => {
+      const isImage = f.type.startsWith("image/");
+      const isPdf   = f.type === "application/pdf";
+      if (!isImage && !isPdf) {
+        rejected.push(f.name);
+        return;
+      }
       if (!files.find(x => x.name === f.name)) files.push(f);
     });
+    if (rejected.length) showToast(`❌ ไฟล์ที่ไม่รองรับ: ${rejected.join(", ")}`, true);
     renderChips();
     checkReady();
   }
