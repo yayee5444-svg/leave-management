@@ -129,6 +129,12 @@
     .drive-link:hover { background: #c6f6d5; }
     .drive-link.show { display: flex; }
 
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     .btn-upload {
       width: 100%;
       padding: 14px;
@@ -151,6 +157,35 @@
       box-shadow: 0 6px 20px rgba(102,126,234,0.45);
     }
     .btn-upload:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-camera {
+      width: 100%;
+      padding: 14px;
+      border: 2.5px solid #667eea;
+      border-radius: 14px;
+      background: white;
+      color: #667eea;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-camera input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .btn-camera:hover:not(:disabled) {
+      background: #ebf4ff;
+      transform: translateY(-2px);
+    }
+    .btn-camera:disabled { opacity: 0.45; cursor: not-allowed; }
 
     .toast {
       position: fixed;
@@ -212,10 +247,16 @@
   <!-- File chips -->
   <div class="file-chips" id="file-chips"></div>
 
-  <!-- Upload button -->
-  <button class="btn-upload" id="btn-upload" disabled onclick="doUpload()">
-    ⬆️ อัปโหลดเอกสาร
-  </button>
+  <!-- Buttons -->
+  <div class="btn-row">
+    <div class="btn-camera" id="btn-camera">
+      📷 ถ่ายรูป
+      <input type="file" id="camera-input" accept="image/*" capture="environment" />
+    </div>
+    <button class="btn-upload" id="btn-upload" disabled onclick="doUpload()">
+      ⬆️ อัปโหลด
+    </button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -259,6 +300,9 @@ let files = [];
 
 // File input
 document.getElementById("file-input").addEventListener("change", e => addFiles(e.target.files));
+
+// Camera input
+document.getElementById("camera-input").addEventListener("change", e => addFiles(e.target.files));
 
 // Drag & drop
 const zone = document.getElementById("upload-zone");
