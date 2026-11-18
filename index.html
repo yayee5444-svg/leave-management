@@ -27,13 +27,7 @@
     }
 
     .icon { font-size: 3rem; margin-bottom: 12px; }
-
-    h1 {
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #2d3748;
-      margin-bottom: 28px;
-    }
+    h1 { font-size: 1.3rem; font-weight: 700; color: #2d3748; margin-bottom: 28px; }
 
     .date-row {
       display: grid;
@@ -54,7 +48,6 @@
       outline: none;
       cursor: pointer;
       transition: border-color 0.2s, box-shadow 0.2s;
-      appearance: none;
       text-align: center;
     }
     select:focus {
@@ -110,25 +103,6 @@
       font-size: 1rem; line-height: 1; padding: 0;
     }
 
-    .drive-link {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      background: #f0fff4;
-      border: 1.5px solid #9ae6b4;
-      border-radius: 12px;
-      padding: 10px 16px;
-      margin-bottom: 20px;
-      font-size: 0.88rem;
-      color: #276749;
-      text-decoration: none;
-      font-weight: 600;
-      transition: background 0.2s;
-    }
-    .drive-link:hover { background: #c6f6d5; }
-    .drive-link.show { display: flex; }
-
     .btn-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -181,12 +155,46 @@
       opacity: 0; cursor: pointer;
       width: 100%; height: 100%;
     }
-    .btn-camera:hover:not(:disabled) {
-      background: #ebf4ff;
-      transform: translateY(-2px);
-    }
-    .btn-camera:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-camera:hover { background: #ebf4ff; transform: translateY(-2px); }
 
+    /* Progress */
+    .progress-wrap {
+      display: none;
+      margin-top: 18px;
+      text-align: left;
+    }
+    .progress-wrap.show { display: block; }
+    .progress-label {
+      font-size: 0.85rem;
+      color: #4a5568;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .progress-bar-bg {
+      background: #e2e8f0;
+      border-radius: 20px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      height: 100%;
+      border-radius: 20px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .progress-items {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: #718096;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    .progress-item { padding: 2px 0; }
+    .progress-item.ok   { color: #38a169; }
+    .progress-item.err  { color: #e53e3e; }
+
+    /* Toast */
     .toast {
       position: fixed;
       bottom: 28px; left: 50%;
@@ -207,7 +215,7 @@
     .toast.error { background: #fc8181; }
 
     @media(max-width: 460px) {
-      .card { padding: 32px 20px; }
+      .card { padding: 28px 16px; }
     }
   </style>
 </head>
@@ -227,15 +235,10 @@
     <select id="sel-month" onchange="onMonthChange()" disabled>
       <option value="">เดือน</option>
     </select>
-    <select id="sel-day" disabled>
+    <select id="sel-day" onchange="checkReady()" disabled>
       <option value="">วัน</option>
     </select>
   </div>
-
-  <!-- Drive folder link -->
-  <a class="drive-link" id="drive-link" href="#" target="_blank">
-    🗂️ <span id="drive-label">เปิดโฟลเดอร์ Google Drive</span>
-  </a>
 
   <!-- Upload zone -->
   <div class="upload-zone" id="upload-zone">
@@ -257,161 +260,221 @@
       ⬆️ อัปโหลด
     </button>
   </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label" id="progress-label">กำลังอัปโหลด...</div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+    <div class="progress-items" id="progress-items"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const DRIVE_BASE = "https://drive.google.com/drive/folders/";
+  // === CONFIG ===
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz-xTcewhDAfFxyUTJwyU80mYrhX_n4ctq1bJsX25SEmcUTbLKxEPJDUJ1-7r28dY4DuA/exec";
 
-const MONTHS_DATA = {
-  "ม.ค.": 31, "ก.พ.": 28, "มี.ค.": 31, "เม.ย.": 30,
-  "พ.ค.": 31, "มิ.ย.": 30, "ก.ค.": 31, "ส.ค.": 31,
-  "ก.ย.": 30, "ต.ค.": 31, "พ.ย.": 30, "ธ.ค.": 31
-};
+  const MONTHS_DATA = {
+    "ม.ค.": 31, "ก.พ.": 28, "มี.ค.": 31, "เม.ย.": 30,
+    "พ.ค.": 31, "มิ.ย.": 30, "ก.ค.": 31, "ส.ค.": 31,
+    "ก.ย.": 30, "ต.ค.": 31, "พ.ย.": 30, "ธ.ค.": 31
+  };
 
-const AVAILABLE = {
-  "2026": ["พ.ย.", "ธ.ค."],
-  "2027": ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
-};
+  const AVAILABLE = {
+    "2026": ["พ.ย.", "ธ.ค."],
+    "2027": ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+  };
 
-const FOLDER_IDS = {
-  "2026": {
-    "พ.ย.": "1kRa2l-9aijBatCAPGdbWc3kwOPsyqv3A",
-    "ธ.ค.": "1R2YWjByp92iagRVm-4x7rotJoOcCC8RC"
-  },
-  "2027": {
-    "ม.ค.":  "1DWumZ8ACbz-puujj0VMcmnnE0kYRz_Ck",
-    "ก.พ.":  "1YP18ZOSlfgUgruW9kpkSYjLX4h3i0x-M",
-    "มี.ค.": "1x4LIEh6DivHnDA5_E1CKwOUpMb6P1wLF",
-    "เม.ย.": "1meKKNO8IHflPzp29Iy2vz_Vyq6aYdbHK",
-    "พ.ค.":  "1IsnT43FelJcXZ5V-_EIS6qIzrqBebGGx",
-    "มิ.ย.": "1zoLaXQPIoquOSj9qCyBgYTqSpBlGUFRY",
-    "ก.ค.":  "15mmd-OFe_6FbYkRvr9O9siwfMC8lxSK7",
-    "ส.ค.":  "1WCAIA1xn9Ib9h345tZ3fDvcx8kg9ra4j",
-    "ก.ย.":  "1Y-hKqSyxqLGrCflrJZ0G-Jn4CIfQknay",
-    "ต.ค.":  "1rQulCNkdrG8l_LSQO6qSHR_mTzB-55rO",
-    "พ.ย.":  "1_9utMOqAomk_mkocR4ulWrIjsKZGzyg4",
-    "ธ.ค.":  "1DBOc15Uw5DJ8Zte9SQDHu4gMK-M_0lwy"
-  }
-};
+  const FOLDER_IDS = {
+    "2026": {
+      "พ.ย.": "1kRa2l-9aijBatCAPGdbWc3kwOPsyqv3A",
+      "ธ.ค.": "1R2YWjByp92iagRVm-4x7rotJoOcCC8RC"
+    },
+    "2027": {
+      "ม.ค.":  "1DWumZ8ACbz-puujj0VMcmnnE0kYRz_Ck",
+      "ก.พ.":  "1YP18ZOSlfgUgruW9kpkSYjLX4h3i0x-M",
+      "มี.ค.": "1x4LIEh6DivHnDA5_E1CKwOUpMb6P1wLF",
+      "เม.ย.": "1meKKNO8IHflPzp29Iy2vz_Vyq6aYdbHK",
+      "พ.ค.":  "1IsnT43FelJcXZ5V-_EIS6qIzrqBebGGx",
+      "มิ.ย.": "1zoLaXQPIoquOSj9qCyBgYTqSpBlGUFRY",
+      "ก.ค.":  "15mmd-OFe_6FbYkRvr9O9siwfMC8lxSK7",
+      "ส.ค.":  "1WCAIA1xn9Ib9h345tZ3fDvcx8kg9ra4j",
+      "ก.ย.":  "1Y-hKqSyxqLGrCflrJZ0G-Jn4CIfQknay",
+      "ต.ค.":  "1rQulCNkdrG8l_LSQO6qSHR_mTzB-55rO",
+      "พ.ย.":  "1_9utMOqAomk_mkocR4ulWrIjsKZGzyg4",
+      "ธ.ค.":  "1DBOc15Uw5DJ8Zte9SQDHu4gMK-M_0lwy"
+    }
+  };
 
-let files = [];
+  let files = [];
 
-// File input
-document.getElementById("file-input").addEventListener("change", e => addFiles(e.target.files));
+  // === INIT ===
+  document.getElementById("file-input").addEventListener("change", e => addFiles(e.target.files));
+  document.getElementById("camera-input").addEventListener("change", e => addFiles(e.target.files));
 
-// Camera input
-document.getElementById("camera-input").addEventListener("change", e => addFiles(e.target.files));
-
-// Drag & drop
-const zone = document.getElementById("upload-zone");
-zone.addEventListener("dragover",  e => { e.preventDefault(); zone.classList.add("drag-over"); });
-zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
-zone.addEventListener("drop", e => {
-  e.preventDefault();
-  zone.classList.remove("drag-over");
-  addFiles(e.dataTransfer.files);
-});
-
-function addFiles(list) {
-  Array.from(list).forEach(f => {
-    if (!files.find(x => x.name === f.name)) files.push(f);
+  const zone = document.getElementById("upload-zone");
+  zone.addEventListener("dragover",  e => { e.preventDefault(); zone.classList.add("drag-over"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    zone.classList.remove("drag-over");
+    addFiles(e.dataTransfer.files);
   });
-  renderChips();
-  checkReady();
-}
 
-function removeFile(i) {
-  files.splice(i, 1);
-  renderChips();
-  checkReady();
-}
+  // === FILES ===
+  function addFiles(list) {
+    Array.from(list).forEach(f => {
+      if (!files.find(x => x.name === f.name)) files.push(f);
+    });
+    renderChips();
+    checkReady();
+  }
 
-function renderChips() {
-  const c = document.getElementById("file-chips");
-  c.innerHTML = files.map((f, i) =>
-    `<div class="chip">📄 ${f.name.length > 18 ? f.name.slice(0,18)+'…' : f.name}
-     <button onclick="removeFile(${i})">×</button></div>`
-  ).join("");
-}
+  function removeFile(i) {
+    files.splice(i, 1);
+    renderChips();
+    checkReady();
+  }
 
-function onYearChange() {
-  const year = document.getElementById("sel-year").value;
-  const ms = document.getElementById("sel-month");
-  const ds = document.getElementById("sel-day");
-  ms.innerHTML = '<option value="">เดือน</option>';
-  ds.innerHTML = '<option value="">วัน</option>';
-  ms.disabled = !year;
-  ds.disabled = true;
-  if (year) {
-    AVAILABLE[year].forEach(m => {
-      const o = document.createElement("option");
-      o.value = m; o.textContent = m;
-      ms.appendChild(o);
+  function renderChips() {
+    const c = document.getElementById("file-chips");
+    c.innerHTML = files.map((f, i) =>
+      `<div class="chip">📄 ${f.name.length > 18 ? f.name.slice(0,18)+'…' : f.name}
+       <button onclick="removeFile(${i})">×</button></div>`
+    ).join("");
+  }
+
+  // === DROPDOWNS ===
+  function onYearChange() {
+    const year = document.getElementById("sel-year").value;
+    const ms = document.getElementById("sel-month");
+    const ds = document.getElementById("sel-day");
+    ms.innerHTML = '<option value="">เดือน</option>';
+    ds.innerHTML = '<option value="">วัน</option>';
+    ms.disabled = !year;
+    ds.disabled = true;
+    if (year) {
+      AVAILABLE[year].forEach(m => {
+        const o = document.createElement("option");
+        o.value = m; o.textContent = m;
+        ms.appendChild(o);
+      });
+    }
+    checkReady();
+  }
+
+  function onMonthChange() {
+    const month = document.getElementById("sel-month").value;
+    const ds = document.getElementById("sel-day");
+    ds.innerHTML = '<option value="">วัน</option>';
+    ds.disabled = !month;
+    if (month) {
+      for (let d = 1; d <= MONTHS_DATA[month]; d++) {
+        const o = document.createElement("option");
+        o.value = d; o.textContent = d;
+        ds.appendChild(o);
+      }
+    }
+    checkReady();
+  }
+
+  function checkReady() {
+    const year  = document.getElementById("sel-year").value;
+    const month = document.getElementById("sel-month").value;
+    const day   = document.getElementById("sel-day").value;
+    document.getElementById("btn-upload").disabled = !(year && month && day && files.length > 0);
+  }
+
+  // === UPLOAD ===
+  async function doUpload() {
+    const year  = document.getElementById("sel-year").value;
+    const month = document.getElementById("sel-month").value;
+    const day   = document.getElementById("sel-day").value;
+    const folderId = FOLDER_IDS[year]?.[month];
+
+    if (!folderId) { showToast("ไม่พบโฟลเดอร์ใน Drive", true); return; }
+
+    // Disable button, show progress
+    document.getElementById("btn-upload").disabled = true;
+    const wrap = document.getElementById("progress-wrap");
+    const bar  = document.getElementById("progress-bar");
+    const itemsDiv = document.getElementById("progress-items");
+    const label = document.getElementById("progress-label");
+    wrap.classList.add("show");
+    itemsDiv.innerHTML = "";
+    bar.style.width = "0%";
+
+    let done = 0;
+    const total = files.length;
+
+    for (const file of files) {
+      label.textContent = `กำลังอัปโหลด ${file.name}...`;
+      try {
+        const base64 = await toBase64(file);
+        const payload = {
+          folderId: folderId,
+          day: day,
+          fileName: file.name,
+          fileContent: base64,
+          mimeType: file.type || "application/octet-stream"
+        };
+
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        done++;
+        bar.style.width = (done / total * 100) + "%";
+
+        if (json.success) {
+          itemsDiv.innerHTML += `<div class="progress-item ok">✅ ${file.name}</div>`;
+        } else {
+          itemsDiv.innerHTML += `<div class="progress-item err">❌ ${file.name}: ${json.message}</div>`;
+        }
+      } catch (err) {
+        done++;
+        bar.style.width = (done / total * 100) + "%";
+        itemsDiv.innerHTML += `<div class="progress-item err">❌ ${file.name}: ${err.message}</div>`;
+      }
+    }
+
+    label.textContent = `อัปโหลดเสร็จแล้ว ${done}/${total} ไฟล์`;
+    showToast(`✅ อัปโหลด ${done} ไฟล์ เข้าโฟลเดอร์ ${day} ${month} ${year} เรียบร้อย!`);
+
+    // Reset
+    setTimeout(() => {
+      files = [];
+      renderChips();
+      checkReady();
+      wrap.classList.remove("show");
+    }, 4000);
+  }
+
+  // === UTILS ===
+  function toBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // Strip data URL prefix, keep only base64 string
+        const base64 = reader.result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
   }
-  updateDriveLink();
-  checkReady();
-}
 
-function onMonthChange() {
-  const month = document.getElementById("sel-month").value;
-  const ds = document.getElementById("sel-day");
-  ds.innerHTML = '<option value="">วัน</option>';
-  ds.disabled = !month;
-  if (month) {
-    for (let d = 1; d <= MONTHS_DATA[month]; d++) {
-      const o = document.createElement("option");
-      o.value = d; o.textContent = d;
-      ds.appendChild(o);
-    }
+  function showToast(msg, err = false) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "toast" + (err ? " error" : "") + " show";
+    setTimeout(() => t.className = "toast", 4000);
   }
-  updateDriveLink();
-  checkReady();
-}
-
-document.getElementById("sel-day").addEventListener("change", checkReady);
-
-function updateDriveLink() {
-  const year  = document.getElementById("sel-year").value;
-  const month = document.getElementById("sel-month").value;
-  const link  = document.getElementById("drive-link");
-  const label = document.getElementById("drive-label");
-  if (year && month && FOLDER_IDS[year]?.[month]) {
-    link.href = DRIVE_BASE + FOLDER_IDS[year][month];
-    label.textContent = `โฟลเดอร์ ${year} / ${month}`;
-    link.classList.add("show");
-  } else {
-    link.classList.remove("show");
-  }
-}
-
-function checkReady() {
-  const year  = document.getElementById("sel-year").value;
-  const month = document.getElementById("sel-month").value;
-  const day   = document.getElementById("sel-day").value;
-  document.getElementById("btn-upload").disabled = !(year && month && day && files.length);
-}
-
-function doUpload() {
-  const year  = document.getElementById("sel-year").value;
-  const month = document.getElementById("sel-month").value;
-  const day   = document.getElementById("sel-day").value;
-  const fid   = FOLDER_IDS[year]?.[month];
-
-  if (fid) {
-    window.open(DRIVE_BASE + fid, "_blank");
-  }
-  showToast(`✅ เปิดโฟลเดอร์ ${day} ${month} ${year} แล้ว — วางไฟล์ใน Drive ได้เลย!`);
-}
-
-function showToast(msg, err = false) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.className = "toast" + (err ? " error" : "") + " show";
-  setTimeout(() => t.className = "toast", 3500);
-}
 </script>
 </body>
 </html>
