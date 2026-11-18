@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบบันทึกการลา</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #f0f4f8;
+      color: #2d3748;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header span { font-size: 1.8rem; }
+
+    .container { max-width: 960px; margin: 32px auto; padding: 0 20px; }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px 32px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      margin-bottom: 28px;
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #667eea;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Form grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.85rem; font-weight: 600; color: #4a5568; }
+
+    input, select, textarea {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: #2d3748;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background: #f7fafc;
+      outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+      background: white;
+    }
+
+    /* Date row */
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Leave type badges */
+    .leave-types {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .leave-type-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      color: #4a5568;
+    }
+    .leave-type-btn:hover { border-color: #667eea; color: #667eea; }
+    .leave-type-btn.active { background: #667eea; color: white; border-color: #667eea; }
+    .leave-type-btn.sick.active    { background: #fc8181; border-color: #fc8181; }
+    .leave-type-btn.personal.active{ background: #68d391; border-color: #68d391; }
+    .leave-type-btn.vacation.active{ background: #63b3ed; border-color: #63b3ed; }
+    .leave-type-btn.other.active   { background: #f6ad55; border-color: #f6ad55; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #cbd5e0;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #f7fafc;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #667eea;
+      background: #ebf4ff;
+    }
+    .upload-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-zone p { color: #718096; font-size: 0.9rem; }
+    .upload-zone p strong { color: #667eea; }
+    .file-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .file-tag {
+      background: #ebf4ff; color: #667eea;
+      padding: 4px 12px; border-radius: 20px; font-size: 0.8rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .file-tag button {
+      background: none; border: none; cursor: pointer; color: #667eea;
+      font-size: 1rem; line-height: 1; padding: 0;
+    }
+
+    /* Drive folder info */
+    .drive-info {
+      background: #f0fff4;
+      border: 1px solid #9ae6b4;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #276749;
+      margin-top: 10px;
+      display: none;
+    }
+    .drive-info.show { display: flex; align-items: center; gap: 8px; }
+    .drive-info a { color: #276749; font-weight: 600; }
+
+    /* Buttons */
+    .btn-row { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+    .btn {
+      padding: 11px 28px;
+      border-radius: 10px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(102,126,234,0.4); }
+    .btn-secondary { background: #edf2f7; color: #4a5568; }
+    .btn-secondary:hover { background: #e2e8f0; }
+
+    /* Records table */
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .search-box {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .search-box input { width: 220px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .badge-sick     { background: #fff5f5; color: #c53030; }
+    .badge-personal { background: #f0fff4; color: #276749; }
+    .badge-vacation { background: #ebf8ff; color: #2b6cb0; }
+    .badge-other    { background: #fffaf0; color: #c05621; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    thead th {
+      background: #f7fafc;
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: #4a5568;
+      border-bottom: 2px solid #e2e8f0;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    tbody tr {
+      border-bottom: 1px solid #edf2f7;
+      transition: background 0.15s;
+    }
+    tbody tr:hover { background: #f7fafc; }
+    tbody td { padding: 12px 14px; }
+
+    .action-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 1rem; padding: 4px 8px; border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .action-btn:hover { background: #edf2f7; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #a0aec0;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: #48bb78;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      font-weight: 600;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { background: #fc8181; }
+
+    /* Stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      text-align: center;
+    }
+    .stat-card .num { font-size: 2rem; font-weight: 800; }
+    .stat-card .lbl { font-size: 0.8rem; color: #718096; margin-top: 4px; }
+    .stat-card.total .num  { color: #667eea; }
+    .stat-card.sick .num   { color: #fc8181; }
+    .stat-card.personal .num { color: #68d391; }
+    .stat-card.vacation .num { color: #63b3ed; }
+
+    @media(max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .date-row  { grid-template-columns: 1fr 1fr; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>📋</span>
+  <h1>ระบบบันทึกการลา</h1>
+</header>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card total">
+      <div class="num" id="stat-total">0</div>
+      <div class="lbl">รายการทั้งหมด</div>
+    </div>
+    <div class="stat-card sick">
+      <div class="num" id="stat-sick">0</div>
+      <div class="lbl">🤒 ลาป่วย</div>
+    </div>
+    <div class="stat-card personal">
+      <div class="num" id="stat-personal">0</div>
+      <div class="lbl">📝 ลากิจ</div>
+    </div>
+    <div class="stat-card vacation">
+      <div class="num" id="stat-vacation">0</div>
+      <div class="lbl">🏖️ ลาพักร้อน</div>
+    </div>
+  </div>
+
+  <!-- Form Card -->
+  <div class="card">
+    <h2>➕ บันทึกการลาใหม่</h2>
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>👤 ชื่อ-นามสกุล</label>
+        <input type="text" id="emp-name" placeholder="กรอกชื่อพนักงาน" />
+      </div>
+
+      <div class="form-group">
+        <label>📅 วันที่ลา</label>
+        <div class="date-row">
+          <select id="sel-year">
+            <option value="">ปี</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+          </select>
+          <select id="sel-month" disabled>
+            <option value="">เดือน</option>
+          </select>
+          <select id="sel-day" disabled>
+            <option value="">วัน</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group full">
+        <label>🏷️ ประเภทการลา</label>
+        <div class="leave-types">
+          <button class="leave-type-btn sick"     data-type="ลาป่วย">🤒 ลาป่วย</button>
+          <button class="leave-type-btn personal" data-type="ลากิจ">📝 ลากิจ</button>
+          <button class="leave-type-btn vacation" data-type="ลาพักร้อน">🏖️ ลาพักร้อน</button>
+          <button class="leave-type-btn other"    data-type="อื่นๆ">📌 อื่นๆ</button>
+        </div>
+        <input type="hidden" id="leave-type" />
+      </div>
+
+      <div class="form-group full">
+        <label>💬 หมายเหตุ (ถ้ามี)</label>
+        <textarea id="note" rows="2" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+      </div>
+
+      <div class="form-group full">
+        <label>📎 แนบเอกสาร (ใบรับรองแพทย์ ฯลฯ)</label>
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" />
+          <div class="upload-icon">📁</div>
+          <p><strong>คลิกหรือลากไฟล์มาวาง</strong><br/>รองรับ PDF, รูปภาพ, Word</p>
+        </div>
+        <div class="file-list" id="file-list"></div>
+        <div class="drive-info" id="drive-info">
+          <span>🗂️</span>
+          <span>โฟลเดอร์ Google Drive: <a id="drive-link" href="#" target="_blank" id="drive-folder-link">เปิดโฟลเดอร์</a></span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="clearForm()">🗑️ ล้างข้อมูล</button>
+      <button class="btn btn-primary"   onclick="saveRecord()">💾 บันทึกการลา</button>
+    </div>
+  </div>
+
+  <!-- Records Card -->
+  <div class="card">
+    <div class="table-header">
+      <h2>📊 รายการการลาทั้งหมด</h2>
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="🔍 ค้นหาชื่อ..." oninput="renderTable()" style="width:200px;" />
+        <select id="filter-type" onchange="renderTable()" style="width:140px;">
+          <option value="">ทุกประเภท</option>
+          <option value="ลาป่วย">ลาป่วย</option>
+          <option value="ลากิจ">ลากิจ</option>
+          <option value="ลาพักร้อน">ลาพักร้อน</option>
+          <option value="อื่นๆ">อื่นๆ</option>
+        </select>
+      </div>
+    </div>
+
+    <table id="records-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>ชื่อ-นามสกุล</th>
+          <th>วันที่ลา</th>
+          <th>ประเภท</th>
+          <th>หมายเหตุ</th>
+          <th>เอกสาร</th>
+          <th>จัดการ</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="icon">📭</div>
+              <div>ยังไม่มีรายการการลา</div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== DATA: โครงสร้างโฟลเดอร์ Google Drive ==========
+const DRIVE_BASE = "https://drive.google.com/drive/folders/";
+const MONTHS = {
+  "ม.ค.": { days: 31, num: 1 },
+  "ก.พ.": { days: 28, num: 2 },
+  "มี.ค.": { days: 31, num: 3 },
+  "เม.ย.": { days: 30, num: 4 },
+  "พ.ค.": { days: 31, num: 5 },
+  "มิ.ย.": { days: 30, num: 6 },
+  "ก.ค.": { days: 31, num: 7 },
+  "ส.ค.": { days: 31, num: 8 },
+  "ก.ย.": { days: 30, num: 9 },
+  "ต.ค.": { days: 31, num: 10 },
+  "พ.ย.": { days: 30, num: 11 },
+  "ธ.ค.": { days: 31, num: 12 }
+};
+
+// โฟลเดอร์ Google Drive IDs ที่สร้างไว้
+const FOLDER_IDS = {
+  "2026": {
+    "พ.ย.": "1kRa2l-9aijBatCAPGdbWc3kwOPsyqv3A",
+    "ธ.ค.": "1R2YWjByp92iagRVm-4x7rotJoOcCC8RC"
+  },
+  "2027": {
+    "ม.ค.":  "1DWumZ8ACbz-puujj0VMcmnnE0kYRz_Ck",
+    "ก.พ.":  "1YP18ZOSlfgUgruW9kpkSYjLX4h3i0x-M",
+    "มี.ค.": "1x4LIEh6DivHnDA5_E1CKwOUpMb6P1wLF",
+    "เม.ย.": "1meKKNO8IHflPzp29Iy2vz_Vyq6aYdbHK",
+    "พ.ค.":  "1IsnT43FelJcXZ5V-_EIS6qIzrqBebGGx",
+    "มิ.ย.": "1zoLaXQPIoquOSj9qCyBgYTqSpBlGUFRY",
+    "ก.ค.":  "15mmd-OFe_6FbYkRvr9O9siwfMC8lxSK7",
+    "ส.ค.":  "1WCAIA1xn9Ib9h345tZ3fDvcx8kg9ra4j",
+    "ก.ย.":  "1Y-hKqSyxqLGrCflrJZ0G-Jn4CIfQknay",
+    "ต.ค.":  "1rQulCNkdrG8l_LSQO6qSHR_mTzB-55rO",
+    "พ.ย.":  "1_9utMOqAomk_mkocR4ulWrIjsKZGzyg4",
+    "ธ.ค.":  "1DBOc15Uw5DJ8Zte9SQDHu4gMK-M_0lwy"
+  }
+};
+
+const AVAILABLE_MONTHS = {
+  "2026": ["พ.ย.", "ธ.ค."],
+  "2027": ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+};
+
+// ========== STATE ==========
+let records = JSON.parse(localStorage.getItem("leaveRecords") || "[]");
+let selectedFiles = [];
+let selectedLeaveType = "";
+
+// ========== INIT ==========
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("sel-year").addEventListener("change", onYearChange);
+  document.getElementById("sel-month").addEventListener("change", onMonthChange);
+
+  // Leave type buttons
+  document.querySelectorAll(".leave-type-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".leave-type-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      selectedLeaveType = btn.dataset.type;
+      document.getElementById("leave-type").value = selectedLeaveType;
+    });
+  });
+
+  // File upload
+  const fileInput = document.getElementById("file-input");
+  fileInput.addEventListener("change", e => handleFiles(e.target.files));
+
+  const zone = document.getElementById("upload-zone");
+  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag-over"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+  zone.addEventListener("drop", e => {
+    e.preventDefault();
+    zone.classList.remove("drag-over");
+    handleFiles(e.dataTransfer.files);
+  });
+
+  renderTable();
+  updateStats();
+});
+
+// ========== DROPDOWN LOGIC ==========
+function onYearChange() {
+  const year = document.getElementById("sel-year").value;
+  const monthSel = document.getElementById("sel-month");
+  const daySel   = document.getElementById("sel-day");
+
+  monthSel.innerHTML = '<option value="">เดือน</option>';
+  daySel.innerHTML   = '<option value="">วัน</option>';
+  monthSel.disabled  = !year;
+  daySel.disabled    = true;
+
+  if (year && AVAILABLE_MONTHS[year]) {
+    AVAILABLE_MONTHS[year].forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m; opt.textContent = m;
+      monthSel.appendChild(opt);
+    });
+  }
+  updateDriveInfo();
+}
+
+function onMonthChange() {
+  const year  = document.getElementById("sel-year").value;
+  const month = document.getElementById("sel-month").value;
+  const daySel = document.getElementById("sel-day");
+
+  daySel.innerHTML = '<option value="">วัน</option>';
+  daySel.disabled  = !month;
+
+  if (month && MONTHS[month]) {
+    for (let d = 1; d <= MONTHS[month].days; d++) {
+      const opt = document.createElement("option");
+      opt.value = d; opt.textContent = d;
+      daySel.appendChild(opt);
+    }
+  }
+  updateDriveInfo();
+}
+
+function updateDriveInfo() {
+  const year  = document.getElementById("sel-year").value;
+  const month = document.getElementById("sel-month").value;
+  const info  = document.getElementById("drive-info");
+  const link  = document.getElementById("drive-link");
+
+  if (year && month && FOLDER_IDS[year] && FOLDER_IDS[year][month]) {
+    const folderId = FOLDER_IDS[year][month];
+    link.href = DRIVE_BASE + folderId;
+    link.textContent = `📂 ${year} / ${month}`;
+    info.classList.add("show");
+  } else {
+    info.classList.remove("show");
+  }
+}
+
+// ========== FILE HANDLING ==========
+function handleFiles(fileList) {
+  Array.from(fileList).forEach(f => {
+    if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+  });
+  renderFileList();
+}
+
+function renderFileList() {
+  const list = document.getElementById("file-list");
+  list.innerHTML = "";
+  selectedFiles.forEach((f, i) => {
+    const tag = document.createElement("div");
+    tag.className = "file-tag";
+    tag.innerHTML = `📄 ${f.name} <button onclick="removeFile(${i})">×</button>`;
+    list.appendChild(tag);
+  });
+}
+
+function removeFile(i) {
+  selectedFiles.splice(i, 1);
+  renderFileList();
+}
+
+// ========== SAVE RECORD ==========
+function saveRecord() {
+  const name  = document.getElementById("emp-name").value.trim();
+  const year  = document.getElementById("sel-year").value;
+  const month = document.getElementById("sel-month").value;
+  const day   = document.getElementById("sel-day").value;
+  const type  = selectedLeaveType;
+  const note  = document.getElementById("note").value.trim();
+
+  if (!name)  return showToast("กรุณากรอกชื่อพนักงาน", true);
+  if (!year || !month || !day) return showToast("กรุณาเลือกวันที่ลา", true);
+  if (!type)  return showToast("กรุณาเลือกประเภทการลา", true);
+
+  const folderId = FOLDER_IDS[year]?.[month] || null;
+  const record = {
+    id: Date.now(),
+    name, year, month, day: parseInt(day),
+    type, note,
+    files: selectedFiles.map(f => f.name),
+    folderId,
+    createdAt: new Date().toLocaleString("th-TH")
+  };
+
+  records.unshift(record);
+  localStorage.setItem("leaveRecords", JSON.stringify(records));
+  renderTable();
+  updateStats();
+  clearForm();
+  showToast(`✅ บันทึกการลาของ ${name} เรียบร้อยแล้ว!`);
+}
+
+// ========== RENDER TABLE ==========
+function renderTable() {
+  const search = document.getElementById("search-input").value.toLowerCase();
+  const filter = document.getElementById("filter-type").value;
+  const tbody  = document.getElementById("table-body");
+
+  let filtered = records.filter(r => {
+    const matchName = r.name.toLowerCase().includes(search);
+    const matchType = !filter || r.type === filter;
+    return matchName && matchType;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <div>ไม่พบรายการ</div>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  const badgeClass = { "ลาป่วย": "sick", "ลากิจ": "personal", "ลาพักร้อน": "vacation", "อื่นๆ": "other" };
+  const typeIcon   = { "ลาป่วย": "🤒", "ลากิจ": "📝", "ลาพักร้อน": "🏖️", "อื่นๆ": "📌" };
+
+  tbody.innerHTML = filtered.map((r, i) => {
+    const badge = `<span class="badge badge-${badgeClass[r.type] || 'other'}">${typeIcon[r.type] || ''} ${r.type}</span>`;
+    const files = r.files?.length
+      ? r.files.map(f => `<span class="badge badge-other" title="${f}">📎 ${f.length > 12 ? f.substring(0,12)+'…' : f}</span>`).join(" ")
+      : "<span style='color:#a0aec0;font-size:0.8rem;'>-</span>";
+    const driveBtn = r.folderId
+      ? `<a href="https://drive.google.com/drive/folders/${r.folderId}" target="_blank" class="action-btn" title="เปิด Google Drive">🗂️</a>`
+      : "";
+    return `<tr>
+      <td style="color:#a0aec0;font-size:0.8rem;">${filtered.length - i}</td>
+      <td><strong>${r.name}</strong></td>
+      <td>${r.day} ${r.month} ${r.year}</td>
+      <td>${badge}</td>
+      <td style="color:#718096;font-size:0.85rem;">${r.note || "-"}</td>
+      <td>${files}</td>
+      <td>
+        ${driveBtn}
+        <button class="action-btn" onclick="deleteRecord(${r.id})" title="ลบ">🗑️</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function deleteRecord(id) {
+  if (!confirm("ต้องการลบรายการนี้?")) return;
+  records = records.filter(r => r.id !== id);
+  localStorage.setItem("leaveRecords", JSON.stringify(records));
+  renderTable();
+  updateStats();
+  showToast("ลบรายการเรียบร้อยแล้ว");
+}
+
+// ========== STATS ==========
+function updateStats() {
+  document.getElementById("stat-total").textContent    = records.length;
+  document.getElementById("stat-sick").textContent     = records.filter(r => r.type === "ลาป่วย").length;
+  document.getElementById("stat-personal").textContent = records.filter(r => r.type === "ลากิจ").length;
+  document.getElementById("stat-vacation").textContent = records.filter(r => r.type === "ลาพักร้อน").length;
+}
+
+// ========== UTILS ==========
+function clearForm() {
+  document.getElementById("emp-name").value = "";
+  document.getElementById("sel-year").value = "";
+  document.getElementById("sel-month").innerHTML = '<option value="">เดือน</option>';
+  document.getElementById("sel-month").disabled = true;
+  document.getElementById("sel-day").innerHTML   = '<option value="">วัน</option>';
+  document.getElementById("sel-day").disabled = true;
+  document.getElementById("note").value = "";
+  document.getElementById("leave-type").value = "";
+  document.getElementById("file-list").innerHTML = "";
+  document.getElementById("drive-info").classList.remove("show");
+  document.querySelectorAll(".leave-type-btn").forEach(b => b.classList.remove("active"));
+  selectedLeaveType = "";
+  selectedFiles = [];
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast" + (isError ? " error" : "") + " show";
+  setTimeout(() => t.className = "toast", 3000);
+}
+</script>
+</body>
+</html>
